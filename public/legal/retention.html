@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/><title>Tilo — Data Retention &amp; Deletion Schedule</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:820px;margin:0 auto;padding:24px;line-height:1.6;color:#111}nav{font-size:13px;margin-bottom:16px}a{color:#0b57d0}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ccc;padding:8px}</style>
+</head><body>
+<nav><a href="/">← Tilo</a> · Last updated: 6 Oct 2026</nav>
+<h1>Data Retention &amp; Deletion Schedule</h1>
+<p>Principle: <strong>ordinary session data ≠ reported evidence ≠ legal hold</strong>. We keep the minimum, for the shortest lawful time, then auto-delete. Exact periods are configured via env (<code>ICT_LOG_DAYS</code> etc.) and shown at <code>GET /api/compliance/status</code>.</p>
+<table><tr><th>Data</th><th>Default retention</th><th>Basis</th></tr>
+<tr><td>Live audio/video/text in transit</td><td><strong>No storage by default</strong> (ephemeral relay/P2P)</td><td>Minimisation (DPDP/GDPR)</td></tr>
+<tr><td>Temporary session ID + match state</td><td>Life of socket only (memory)</td><td>Operations</td></tr>
+<tr><td>IP/security (ICT) logs — hashed</td><td><strong>180-day rolling, in India</strong>, then auto-purge</td><td>CERT-In 2022</td></tr>
+<tr><td>User reports + moderation decisions</td><td><strong>180 days</strong></td><td>IT Rules safety period</td></tr>
+<tr><td>Removed-content evidence + associated records</td><td><strong>≥180 days</strong></td><td>IT Rules investigation hold</td></tr>
+<tr><td>Registration info post-cancellation</td><td><strong>180 days</strong></td><td>IT Rules</td></tr>
+<tr><td>Legal-hold evidence</td><td>Until hold released by counsel/authorities</td><td>Law overrides erasure</td></tr>
+<tr><td>Grievance/support tickets</td><td>3 years</td><td>Consumer/tax audit</td></tr>
+<tr><td>Consent records</td><td>3 years after withdrawal</td><td>Proof of DPDP/GDPR consent</td></tr>
+<tr><td>Payment receipts</td><td>Per tax law (8+ years typical)</td><td>RBI/tax</td></tr>
+<tr><td>Marketing consent</td><td>Until withdrawn + audit tail</td><td>DPDP/GDPR</td></tr></table>
+<h2>Deletion</h2>
+<p>In-app <strong>Privacy → Delete my data</strong> or <code>POST /api/data-delete</code> queues erasure of non-essential records. Safety/legal-hold/tax records are exempt and disclosed as such (with the legal reason). Server clocks sync to government NTP so retention windows are auditable.</p>
+</body></html>

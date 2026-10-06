@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/><title>Tilo — Child Safety / CSAE Policy</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:820px;margin:0 auto;padding:24px;line-height:1.6;color:#111}nav{font-size:13px;margin-bottom:16px}a{color:#0b57d0}ol li{margin:8px 0}</style>
+</head><body>
+<nav><a href="/">← Tilo</a> · Zero tolerance · Last updated: 6 Oct 2026</nav>
+<h1>Child Safety &amp; CSAE Policy</h1>
+<p><strong>18+ only. No minors. No exceptions in V1.</strong> Under DPDP a child is anyone under 18; COPPA protects under-13s; the FTC’s NGL order (July 2024) banned anonymous messaging for under-18s; Google Play (26 Aug 2026) age-restricts anonymous/random chat; Apple (Feb 2026) says random/anonymous chat does not belong on the App Store. Omegle shut down (Nov 2023) under this exact pressure. We built for that reality.</p>
+<h2>1. Prevention</h2>
+<ul><li>Neutral DOB age gate + explicit 18+ confirmation, <strong>server-enforced</strong> (checkbox alone is rejected; mismatched/failed attestations are logged).</li>
+<li>No public profiles, no directory, no friend requests — random ephemeral matching only.</li>
+<li>Text-first posture: video is P2P with pre-connection warnings; sexual-content prohibition is shown before first chat.</li>
+<li>Minimal analytics, no behavioural ads to anyone, no profiling of minors (prohibited under DPDP Art.9, GDPR/DSA Art.28, UK Age Appropriate Design Code).</li></ul>
+<h2>2. Detection</h2>
+<ul><li>Real-time text signals for grooming/CSAM/sextortion (critical tier) + sexual/threat/hate/scam tiers; decision metadata retained, content not stored.</li>
+<li>Hash-matching readiness (PhotoDNA / NCMEC / StopNCII) for any uploaded/retained evidence; human review for every critical hit.</li>
+<li>Rate limits + behavioural signals (mass handshakes, rapid Next, spam bursts) to catch bots and sextortion farms.</li></ul>
+<h2>3. Response — emergency workflow (staff must follow exactly)</h2>
+<ol><li><strong>Report received</strong> (in-app reason <code>child-safety</code>/<code>emergency</code>, email to <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a> subject <code>[CHILD-SAFETY]</code>, or auto-flag).</li>
+<li><strong>Classify</strong> within minutes; treat as critical until cleared.</li>
+<li><strong>Preserve evidence</strong> — session metadata + report held 180 days minimum; place legal hold (no deletion).</li>
+<li><strong>Restrict offender</strong> — disconnect, long-hold ban, block rematch.</li>
+<li><strong>Child-safety escalation</strong> — notify child-safety lead + legal immediately.</li>
+<li><strong>Mandatory reporting</strong> — POCSO cases to Indian authorities; US-apparent CSAM/enticement/trafficking to NCMEC CyberTipline per 18 U.S.C. §2258A; other regions per local duty (UK OSA, AU eSafety, BR protections).</li>
+<li><strong>Victim care</strong> — do not re-victimise; no internal viewing beyond need-to-know; offer reporting resources.</li>
+<li><strong>Account action + audit</strong> — document every step for the transparency report.</li></ol>
+<p>Failing to report suspected child sexual abuse can itself be an offence (POCSO). Ordinary support staff must not improvise — escalate.</p>
+<h2>4. Contact</h2>
+<p>Child-safety lead, grievance, law enforcement (all regions): <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a> — use subjects <code>[CHILD-SAFETY]</code>, <code>[GRIEVANCE]</code>, <code>[LAW-ENFORCEMENT]</code> (monitored continuously; emergencies prioritised).</p>
+<p>Play-ground truth: Google Play Child Safety Standards self-certifications + child-safety contact point are completed before any Play release; iOS ships only if the product is redesigned so random/anonymous chat is not its primary experience.</p>
+</body></html>

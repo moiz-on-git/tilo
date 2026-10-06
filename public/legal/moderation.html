@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/><title>Tilo — Content Moderation Policy</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:820px;margin:0 auto;padding:24px;line-height:1.6;color:#111}nav{font-size:13px;margin-bottom:16px}a{color:#0b57d0}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ccc;padding:8px}</style>
+</head><body>
+<nav><a href="/">← Tilo</a> · Last updated: 6 Oct 2026</nav>
+<h1>Content Moderation Policy (how reports become actions)</h1>
+<p>Covers IT Rules due diligence (“reasonable efforts”, government/court takedown <strong>3h</strong> per Feb-2026 amendment, illegal-content removals <strong>36h</strong>, nudity/impersonation <strong>2h</strong>), DSA notice-and-action (Art.16) + statements of reasons + trusted flaggers, UK OSA illegal-content duties, and app-store UGC duties (report/block/filter + support contact).</p>
+<h2>1. Pipeline</h2>
+<p><code>User → Age gate → Matchmaking + safety filters → Live ephemeral chat → Report/Block/safety signals → Risk classifier → Low (continue) / Review (human) / Critical (immediate action + evidence hold + legal escalation)</code>. AI never solely decides bans for critical cases — a trained human reviews.</p>
+<h2>2. Tiers &amp; SLAs</h2>
+<table><tr><th>Tier</th><th>Examples</th><th>Action</th><th>SLA</th></tr>
+<tr><td>Critical</td><td>CSAM, grooming, sextortion, minor in adult chat, imminent threat</td><td>Disconnect both, offender hold, evidence hold, authority report</td><td>Minutes; NCMEC/authorities without delay; CERT-In 6h if cyber-incident</td></tr>
+<tr><td>Emergency content</td><td>Nudity/private-area/sexual-act/impersonation complaint</td><td>Disable/remove</td><td>2 hours (IT Rules)</td></tr>
+<tr><td>Standard illegal/harmful</td><td>Harassment, hate, fraud, privacy violation, obscenity</td><td>Block/remove + strike/ban</td><td>Ack 24h, resolve 7d; illegal-content removals 36h</td></tr>
+<tr><td>Spam/low</td><td>Bots, flooding</td><td>Throttle/remove</td><td>Best effort + transparency counts</td></tr></table>
+<h2>3. What reporters get</h2>
+<p>Every report returns an <code>ackId</code> (e.g., via <code>POST /api/report</code> or in-app Report). Emergency reports show emergency SLA. Every enforcement shows a statement of reasons (what rule, what action, how to appeal).</p>
+<h2>4. Repeat offenders</h2>
+<p>Strikes accumulate per hashed network/device signal: default 24h × strikes; critical child-safety = long hold + manual review before any release. Block (one tap) prevents rematch in both directions. Appeals can lift or uphold; abusive appeals are logged.</p>
+<h2>5. Records</h2>
+<p>Removed content + associated records preserved 180 days for investigation (IT Rules) or longer on legal hold; registration info 180 days post-cancellation. Transparency aggregates published at <code>GET /api/transparency</code> and in periodic reports (SSMI monthly if &gt;5M Indian users; DSA reports if EU in scope).</p>
+<p>Appeals process: <a href="/legal/reporting-appeals.html">Reporting &amp; Appeals</a> · Rules: <a href="/legal/community-guidelines.html">Community Guidelines</a></p>
+</body></html>

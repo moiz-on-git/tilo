@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/><title>Tilo — Reporting &amp; Appeals</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:820px;margin:0 auto;padding:24px;line-height:1.6;color:#111}nav{font-size:13px;margin-bottom:16px}a{color:#0b57d0}</style>
+</head><body>
+<nav><a href="/">← Tilo</a> · Last updated: 6 Oct 2026</nav>
+<h1>Reporting &amp; Appeals (notice-and-action you can use in one tap)</h1>
+<h2>1. Report in-app</h2>
+<p>Every live session shows <strong>Report · Block · Next · Leave</strong>. Tapping Report opens reasons: child-safety, nudity/sexual, harassment, threat, scam/fraud, privacy violation, impersonation, illegal content, spam, other, emergency. The report auto-attaches session metadata (no media stored by default) and returns an <code>ackId</code>. Emergency/child-safety jumps the queue.</p>
+<h2>2. Report outside the app</h2>
+<p>Email <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a> with subject <code>[GRIEVANCE]</code> (general) or <code>[CHILD-SAFETY]</code> (minors/CSAE) with: what happened, when (IST/UTC), session/ack ID if any, and screenshots only if lawful to share. Do not send CSAM to us — describe it and let authorities guide evidence.</p>
+<h2>3. What happens next (SLAs — IT Rules Feb-2026)</h2>
+<ul><li>Acknowledge within <strong>24 hours</strong>.</li><li>Emergency nudity/private-area/impersonation: disable within <strong>2 hours</strong>.</li><li>Illegal-content removals: <strong>36 hours</strong>. Standard: resolve within <strong>7 days</strong>; Grievance Appellate Committee appeal within <strong>30 days</strong>.</li><li>Non-consensual intimate imagery (US TAKE IT DOWN Act, FTC enforcing from May 2026): remove within <strong>48 hours</strong> of valid notice.</li></ul>
+<h2>4. Appeal a moderation decision</h2>
+<p>Reply with your <code>ackId</code> to <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a> within 30 days. Include why the decision was wrong and any context. A different reviewer re-examines; outcomes: uphold / reduce / lift + expunge strike. Child-safety critical holds are released only after human + legal clearance.</p>
+<h2>5. Transparency</h2>
+<p>Aggregate counts (reports by reason, actions, government requests) are published via <code>GET /api/transparency</code> and periodic reports.</p>
+</body></html>

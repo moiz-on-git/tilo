@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/><title>Tilo — Privacy Policy</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:820px;margin:0 auto;padding:24px;line-height:1.6;color:#111}nav{font-size:13px;margin-bottom:16px}a{color:#0b57d0}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ccc;padding:8px;text-align:left}.badge{background:#000;color:#fff;padding:2px 8px;font-size:12px}</style>
+</head><body>
+<nav><a href="/">← Tilo</a> · <span class="badge">18+ only</span> · Last updated: 6 Oct 2026 · Consent version: 2026-10-06-v1</nav>
+<h1>Privacy Policy</h1>
+<p><strong>Who we are:</strong> Tilo, India. Contact (support, privacy/DPO and grievance): <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a>.</p>
+<p>Tilo is an <strong>18+ only, anonymous-to-other-users, ephemeral</strong> random chat service (text + WebRTC video). We do <strong>not</strong> require your real name. We do <strong>not</strong> store chat text, voice or video by default. Other users see only “Stranger”. The platform processes minimal technical data for safety, security and legal compliance.</p>
+<h2>1. What we collect (data minimisation)</h2>
+<table><tr><th>Category</th><th>Examples</th><th>Purpose</th><th>Basis (IN / EU)</th></tr>
+<tr><td>Account/eligibility</td><td>DOB-derived age-range (18–24 / 25+), 18+ confirmation, consent record</td><td>Prevent child access; prove consent</td><td>DPDP consent + legal obligation / GDPR Art.6(1)(c)</td></tr>
+<tr><td>Technical/security</td><td>Hashed IP, device/session ID, timestamps, match events</td><td>Abuse prevention, rate limits, CERT-In logs</td><td>Legitimate interest + legal obligation</td></tr>
+<tr><td>Chat relay (ephemeral)</td><td>Text being relayed; WebRTC signalling</td><td>Deliver the chat you requested</td><td>Contract / consent</td></tr>
+<tr><td>Safety reports</td><td>Report reason, ack ID, session metadata (no media stored)</td><td>Moderation, IT-Rules 180-day preservation, POCSO reporting</td><td>Legal obligation</td></tr>
+<tr><td>Support/grievance</td><td>Message you send us + contact you provide</td><td>Resolve complaints (24h ack / 7-day resolve)</td><td>Legal obligation</td></tr>
+<tr><td>Payments (if enabled)</td><td>Handled by store/processor; we keep receipts only</td><td>Tax/consumer law</td><td>Legal obligation</td></tr></table>
+<p><strong>What we do NOT collect by default:</strong> real name, chat transcripts database, video/audio recordings, precise location, advertising IDs, cross-site trackers.</p>
+<h2>2. Why we process (purpose limitation)</h2>
+<p>Service operation · safety &amp; fraud prevention · moderation · legal compliance (DPDP, IT Act/Rules, CERT-In, POCSO, tax) · support · minimal reliability analytics. No behavioural advertising. No sale of personal data.</p>
+<h2>3. Consent &amp; withdrawal (DPDP)</h2>
+<p>Before first match you see an itemised notice and give free, specific, informed, unconditional, unambiguous consent. Withdrawing is as easy as giving: <strong>Privacy → Withdraw consent</strong> in-app, or <code>POST /api/consent {"consent":false}</code>. Withdrawal stops matching; safety/legal-hold records are retained per <a href="/legal/retention.html">Retention Schedule</a>.</p>
+<h2>4. Children — 18+ only</h2>
+<p>Anyone under 18 is a child under DPDP/IT Rules and may not use Tilo. There is no parental-consent flow in V1 — under-18 access is refused (see <a href="/legal/child-safety.html">Child Safety Policy</a>). Do not use Tilo if you are under 18.</p>
+<h2>5. Sharing</h2>
+<p>Cloud/hosting (India region), WebRTC STUN (connection metadata only), safety tooling — all under written DPAs. Law enforcement: only on valid legal process via <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a> (see <a href="/legal/law-enforcement.html">Law Enforcement Policy</a>). No data sale. EU/UK transfers use SCCs/IDTA where applicable.</p>
+<h2>6. Retention</h2>
+<p>Live media: never stored. Session IDs: short-lived. Security (ICT) logs: 180-day rolling in India (CERT-In). Removed-content/report evidence: 180 days (IT Rules) or longer on legal hold. See <a href="/legal/retention.html">full matrix</a>.</p>
+<h2>7. International transfers</h2>
+<p>Indian-user data is hosted in India. If you use Tilo from the EU/UK/US/AU/BR, your ephemeral traffic may transit signalling/CDN infrastructure; safeguards (SCCs/contractual) apply. Region allow-listing is enforced — unavailable regions get HTTP 451.</p>
+<h2>8. Your rights</h2>
+<ul><li><strong>India (DPDP):</strong> access, correction, erasure, nomination, grievance redressal (~90-day rights workflow). Use in-app <strong>Privacy → Download/Delete my data</strong> or <code>GET /api/data-export</code> / <code>POST /api/data-delete</code>.</li>
+<li><strong>EU/UK (GDPR):</strong> access, rectification, erasure, restriction, portability, objection. Contact <a href="mailto:tiloappcomplaints@protonmail.com">tiloappcomplaints@protonmail.com</a>. Breach notice to authority within 72h where required.</li>
+<li><strong>California (CCPA/CPRA):</strong> know/delete/correct, opt-out of sale/sharing (we do not sell/share). No discrimination for exercising rights.</li>
+<li><strong>US under-13 (COPPA):</strong> service is 18+; under-13 data is not knowingly collected — accounts/sessions are refused and purged.</li></ul>
+<h2>9. Automated moderation</h2>
+<p>Real-time text screening (child-safety critical signals, sexual explicit, threats, PII/scam) runs as <code>classify → retain decision metadata only</code>. Critical hits end the chat and create a safety hold. You can appeal via <a href="/legal/reporting-appeals.html">Reporting &amp; Appeals</a>.</p>
+<h2>10. Security (no blueprint)</h2>
+<p>Encryption in transit (HTTPS/WSS), hashed identifiers, access controls, monitoring, backups, 6-hour CERT-In incident escalation, tested breach playbook. “Encrypted in transit” ≠ “platform-blind E2EE” — we process signalling/safety metadata for moderation and legal compliance.</p>
+<h2>11. Grievance &amp; changes</h2>
+<p>Grievance Officer details and SLAs: <a href="/legal/grievance.html">Grievance Policy</a>. Material changes are announced in-app and versioned (consent version bump).</p>
+<p>Related: <a href="/legal/terms.html">Terms</a> · <a href="/legal/community-guidelines.html">Community Guidelines</a> · <a href="/legal/child-safety.html">Child Safety</a> · <a href="/legal/moderation.html">Moderation</a> · <a href="/legal/retention.html">Retention</a> · <a href="/legal/cookies.html">Cookies</a></p>
+</body></html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Tilo — Connect with the unknown</title>
+<meta name="description" content="Tilo is an anonymous random chat. Text and video with strangers. No account required. 18+ only." />
+<meta name="theme-color" content="#000000" />
+<meta name="referrer" content="no-referrer" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css" />
+<script src="/socket.io/socket.io.js" defer></script>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- LANDING -->
+  <section id="landing" class="screen active">
+    <div class="landing-center">
+      <h1 class="logo">TILO</h1>
+      <p class="tagline">Connect with the unknown.</p>
+      <p class="age-banner"><strong>18+ ONLY.</strong> No minors. Age is verified by date of birth on the server — a checkbox alone is not accepted.</p>
+      <button id="startBtn" class="start-btn">START CHAT</button>
+
+      <div class="landing-controls">
+        <div class="mode-toggle" role="tablist" aria-label="Chat mode">
+          <button id="modeVideo" class="mode-btn active" data-mode="video">Video</button>
+          <button id="modeText" class="mode-btn" data-mode="text">Text</button>
+        </div>
+
+        <div class="gate-card">
+          <label for="dobInput">Date of birth (YYYY-MM-DD) — required, checked on server</label>
+          <input id="dobInput" type="date" min="1900-01-01" autocomplete="bday" aria-label="Date of birth" />
+          <label class="age-check">
+            <input type="checkbox" id="ageCheck" />
+            <span>I confirm I am 18 or older and I agree to the <a href="/legal/terms.html" target="_blank" rel="noreferrer">Terms</a>, <a href="/legal/privacy.html" target="_blank" rel="noreferrer">Privacy Policy</a> and <a href="/legal/community-guidelines.html" target="_blank" rel="noreferrer">Community Guidelines</a>. I understand Tilo is anonymous to other users but retains hashed safety logs (180 days, India) and reports abuse to authorities where required.</span>
+          </label>
+          <div id="consentBox" class="consent-box">
+            <p><strong>Itemised consent (DPDP/GDPR notice):</strong> matching + ephemeral relay; safety screening + abuse prevention; security logging (180d, India); grievance handling. No ads, no sale, no stored recordings. <button id="consentDetailsBtn" class="link-btn" type="button">Details</button></p>
+            <div class="consent-row">
+              <button id="consentAccept" class="btn btn-light small" type="button">Accept</button>
+              <button id="consentWithdraw" class="btn btn-ghost small" type="button">Withdraw</button>
+              <span id="consentState" class="consent-state">Not decided</span>
+            </div>
+          </div>
+          <p id="gateError" class="gate-error hidden" role="alert"></p>
+        </div>
+
+        <div class="online-badge"><span class="dot"></span><span id="onlineLanding">— online</span></div>
+      </div>
+    </div>
+    <footer class="landing-footer">
+      <span>No account • Anonymous chat • <button id="rulesBtn" class="link-btn">Rules &amp; Safety</button></span>
+      <nav class="legal-links" aria-label="Legal">
+        <a href="/legal/privacy.html">Privacy</a> · <a href="/legal/terms.html">Terms</a> ·
+        <a href="/legal/community-guidelines.html">Guidelines</a> · <a href="/legal/child-safety.html">Child Safety</a> ·
+        <a href="/legal/moderation.html">Moderation</a> · <a href="/legal/reporting-appeals.html">Appeals</a> ·
+        <a href="/legal/grievance.html">Grievance</a> · <a href="/legal/law-enforcement.html">Law Enforcement</a> ·
+        <a href="/legal/retention.html">Retention</a> · <a href="/legal/cookies.html">Cookies</a>
+      </nav>
+      <p class="contact-line">Support · Grievance · Privacy · Child safety: tiloappcomplaints@protonmail.com</p>
+    </footer>
+  </section>
+
+  <!-- CHAT -->
+  <section id="chat" class="screen">
+    <header class="topbar">
+      <div class="brand-mini">TILO</div>
+      <div class="top-status"><span class="dot"></span><span id="onlineChat">—</span>&nbsp;online • <span id="modeBadge">Video</span> • <span id="connState">idle</span></div>
+      <div class="top-actions">
+        <button id="nextBtn" class="btn btn-light">Next</button>
+        <button id="blockBtn" class="btn btn-ghost" title="Block this stranger — never match again">Block</button>
+        <button id="privacyBtn" class="btn btn-ghost" title="Privacy, data & grievance">Privacy</button>
+        <button id="stopBtn" class="btn btn-ghost">Stop</button>
+      </div>
+    </header>
+
+    <div class="safety-strip">
+      You’re chatting with a stranger. Never share phone, address, OTPs, passwords or bank details. Nudity/sexual content = instant ban.
+      <button id="reportBtn" class="link-btn danger">Report</button>
+    </div>
+
+    <main class="chat-grid">
+      <div class="video-pane">
+        <div class="video-wrap remote-wrap">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <span class="video-label">Stranger</span>
+          <div id="remotePlaceholder" class="video-placeholder">Waiting for stranger…</div>
+        </div>
+        <div class="video-wrap local-wrap">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <span class="video-label">You</span>
+        </div>
+        <div class="media-controls">
+          <button id="muteBtn" class="btn btn-ghost small">Mute</button>
+          <button id="camBtn" class="btn btn-ghost small">Cam Off</button>
+        </div>
+        <div id="textOnlyNotice" class="text-only hidden">Text-only mode — camera is off.</div>
+      </div>
+
+      <div class="msg-pane">
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <div id="typing" class="typing hidden">Stranger is typing…</div>
+        <form id="msgForm" class="msg-form" autocomplete="off">
+          <input id="msgInput" maxlength="500" placeholder="Type a message…" aria-label="Type a message" />
+          <button type="submit" class="btn btn-light">Send</button>
+        </form>
+      </div>
+    </main>
+  </section>
+
+  <!-- RULES MODAL -->
+  <div id="rulesModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Safety &amp; Rules (18+)</h2>
+      <ul>
+        <li>18+ only — DOB verified on server.</li>
+        <li>No personal data: phone, address, OTPs, bank. Such messages are auto-blocked.</li>
+        <li>No nudity, sexual solicitation, harassment, hate, scams. Report = instant disconnect + evidence hold (180 days).</li>
+        <li>Child-safety reports go to authorities (POCSO / NCMEC) where required.</li>
+        <li>Text is relayed, never stored. Video is peer-to-peer (WebRTC) — the other participant may learn your network address.</li>
+        <li>Hashed security logs kept 180 days in India (CERT-In). See <a href="/legal/privacy.html">Privacy</a>, <a href="/legal/child-safety.html">Child Safety</a>, <a href="/legal/grievance.html">Grievance</a>.</li>
+      </ul>
+      <button id="closeRules" class="btn btn-light">Got it</button>
+    </div>
+  </div>
+
+  <!-- REPORT MODAL -->
+  <div id="reportModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Report this stranger</h2>
+      <p class="muted">Reports attach session metadata automatically. Emergency/child-safety jumps the queue. False reports are logged.</p>
+      <label for="reportReason">Reason (required)</label>
+      <select id="reportReason">
+        <option value="child-safety">Child safety / grooming / CSAM / sextortion</option>
+        <option value="emergency">Emergency — imminent harm</option>
+        <option value="nudity-sexual">Nudity / sexual content</option>
+        <option value="harassment">Harassment</option>
+        <option value="threat">Threat / violence</option>
+        <option value="scam-fraud">Scam / fraud</option>
+        <option value="privacy-violation">Privacy violation / doxxing</option>
+        <option value="impersonation">Impersonation</option>
+        <option value="illegal-content">Illegal content</option>
+        <option value="spam">Spam</option>
+        <option value="other" selected>Other</option>
+      </select>
+      <label for="reportDetails">Details (optional, max 500 chars)</label>
+      <textarea id="reportDetails" maxlength="500" rows="3" placeholder="What happened?"></textarea>
+      <div class="modal-row">
+        <button id="reportSubmit" class="btn btn-light">Send report</button>
+        <button id="reportCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIVACY MODAL -->
+  <div id="privacyModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Privacy, data &amp; grievance</h2>
+      <p class="muted">DPDP/GDPR/CCPA rights: access, correction, erasure. Safety/legal-hold records (180d) are exempt and disclosed as such.</p>
+      <div class="modal-row">
+        <button id="dlData" class="btn btn-ghost small">Download my data</button>
+        <button id="delData" class="btn btn-ghost small">Delete my data</button>
+      </div>
+      <div class="modal-row">
+        <button id="withdrawBtn" class="btn btn-ghost small">Withdraw consent</button>
+        <a class="btn btn-ghost small" href="/legal/grievance.html">Grievance Officer</a>
+      </div>
+      <p class="muted small">Grievance: tiloappcomplaints@protonmail.com (ack 24h, resolve 7d, emergency 2h) · All subjects: [SUPPORT] [PRIVACY] [GRIEVANCE] [CHILD-SAFETY] [LAW-ENFORCEMENT]</p>
+      <pre id="privacyOut" class="privacy-out hidden"></pre>
+      <button id="closePrivacy" class="btn btn-light">Close</button>
+    </div>
+  </div>
+
+  <div id="cookieNotice" class="cookie hidden">
+    <span>No tracking cookies. Session + consent memory only. <a href="/legal/cookies.html">Learn more</a>.</span>
+    <button id="cookieOk" class="btn btn-light small">OK</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+</body>
+</html>
