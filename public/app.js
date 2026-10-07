@@ -163,10 +163,22 @@
     });
     socket.on('matched', async (d) => {
       isCaller = d.role === 'caller';
-      setConn('connected to stranger');
-      sysMsg('Connected to a stranger. Say hi! Report/Block are one tap if anything goes wrong.');
+      const peerMode = d && typeof d.peerMode === 'string' ? d.peerMode : null;
+      const crossMode = !!(d && d.crossMode) || (peerMode && peerMode !== mode);
+      setConn(crossMode ? 'connected to stranger (text)' : 'connected to stranger');
+      if (crossMode) {
+        sysMsg(`Connected to a stranger (you: ${mode}, stranger: ${peerMode || 'other'}). Different modes — text chat works here.`);
+      } else {
+        sysMsg('Connected to a stranger. Say hi! Report/Block are one tap if anything goes wrong.');
+      }
       remotePlaceholder.style.display = 'flex';
-      remotePlaceholder.textContent = 'Connecting video…';
+      if (mode === 'text') {
+        remotePlaceholder.textContent = crossMode ? 'Text chat — stranger is on video (video unavailable here)' : 'Text-only mode';
+      } else if (crossMode) {
+        remotePlaceholder.textContent = 'Connecting video… (stranger is on text — text chat works regardless)';
+      } else {
+        remotePlaceholder.textContent = 'Connecting video…';
+      }
       messagesEl.scrollTop = messagesEl.scrollHeight;
       await setupPeer();
     });
@@ -262,9 +274,24 @@
         socket.emit('webrtc-offer', { offer });
       } catch (e) { console.warn(e); }
     }
+    // If the stranger is on text (or has no camera), no remote track ever
+    // arrives and the UI would sit on "Connecting video…" forever even though
+    // text chat already works. Nudge toward text after a few seconds.
+    clearTimeout(setupPeer._videoTimer);
+    setupPeer._videoTimer = setTimeout(() => {
+      try {
+        if (mode === 'video' && pc && !remoteVideo.srcObject) {
+          remotePlaceholder.style.display = 'flex';
+          if (/connecting/i.test(remotePlaceholder.textContent || '')) {
+            remotePlaceholder.textContent = 'Video unavailable — text chat still works.';
+          }
+        }
+      } catch {}
+    }, 8000);
   }
 
   function cleanupPeer(stopLocal = true) {
+    try { clearTimeout(setupPeer._videoTimer); } catch {}
     try { if (pc) pc.close(); } catch {}
     pc = null;
     remoteVideo.srcObject = null;

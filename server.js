@@ -440,14 +440,18 @@ function getPartner(socketId) {
   return partners.get(socketId);
 }
 
-function pair(a, b) {
+function pair(a, b, meta = {}) {
   partners.set(a, b);
   partners.set(b, a);
   // remove both from queue if present
   removeFromQueue(a);
   removeFromQueue(b);
-  io.to(a).emit('matched', { role: 'caller' });
-  io.to(b).emit('matched', { role: 'callee' });
+  const { callerId = a, peerModeForA = null, peerModeForB = null, crossMode = false } = meta;
+  const calleeId = callerId === a ? b : a;
+  const callerPeerMode = callerId === a ? peerModeForA : peerModeForB;
+  const calleePeerMode = callerId === a ? peerModeForB : peerModeForA;
+  io.to(callerId).emit('matched', { role: 'caller', peerMode: callerPeerMode, crossMode });
+  io.to(calleeId).emit('matched', { role: 'callee', peerMode: calleePeerMode, crossMode });
   broadcastCount();
 }
 
@@ -489,23 +493,52 @@ function enqueue(socket, mode) {
   return true;
 }
 
-function tryMatch(newcomerId, mode) {
-  // find first waiter with compatible mode, skipping blocklisted pairs
+function isCompatibleMode(waiterMode, newcomerMode) {
+  return waiterMode === newcomerMode || waiterMode === 'any' || newcomerMode === 'any';
+}
+
+function tryPairCandidates(waiterId, waiterMode, newcomerId, newcomerMode) {
   const meSock = io.sockets.sockets.get(newcomerId);
-  const meHashed = meSock?.data?.hashedIp || null;
+  const otherSock = io.sockets.sockets.get(waiterId);
+  if (!otherSock || !meSock) {
+    removeFromQueue(waiterId);
+    return false;
+  }
+  const meHashed = meSock.data?.hashedIp || null;
+  const otherHashed = otherSock.data?.hashedIp || null;
+  if (meHashed && otherHashed && isBlockedPair(meHashed, otherHashed)) return false;
+  const crossMode = waiterMode !== newcomerMode && waiterMode !== 'any' && newcomerMode !== 'any';
+  // When modes differ, the video side creates the WebRTC offer so the text
+  // side (which never initiates) can still answer. Text chat works either way.
+  let callerId = waiterId;
+  if (crossMode) {
+    if (waiterMode === 'video' && newcomerMode === 'text') callerId = waiterId;
+    else if (waiterMode === 'text' && newcomerMode === 'video') callerId = newcomerId;
+  }
+  pair(waiterId, newcomerId, {
+    callerId,
+    peerModeForA: newcomerMode, // peer mode as seen by waiter (a)
+    peerModeForB: waiterMode, // peer mode as seen by newcomer (b)
+    crossMode,
+  });
+  return true;
+}
+
+function tryMatch(newcomerId, mode) {
+  // Pass 1: prefer same-mode (or 'any') so video-video stays video.
+  // Pass 2: cross-mode fallback (video<->text) so two users are never stuck
+  // on "searching for stranger" just because their tabs selected different modes.
   for (let idx = 0; idx < waitingQueue.length; idx += 1) {
     const w = waitingQueue[idx];
     if (w.id === newcomerId) continue;
-    if (!(w.mode === mode || w.mode === 'any' || mode === 'any')) continue;
-    const otherSock = io.sockets.sockets.get(w.id);
-    if (!otherSock || !meSock) {
-      removeFromQueue(w.id);
-      continue;
-    }
-    const otherHashed = otherSock.data?.hashedIp || null;
-    if (meHashed && otherHashed && isBlockedPair(meHashed, otherHashed)) continue;
-    pair(w.id, newcomerId);
-    return true;
+    if (!isCompatibleMode(w.mode, mode)) continue;
+    if (tryPairCandidates(w.id, w.mode, newcomerId, mode)) return true;
+  }
+  for (let idx = 0; idx < waitingQueue.length; idx += 1) {
+    const w = waitingQueue[idx];
+    if (w.id === newcomerId) continue;
+    if (isCompatibleMode(w.mode, mode)) continue; // already tried
+    if (tryPairCandidates(w.id, w.mode, newcomerId, mode)) return true;
   }
   return false;
 }
