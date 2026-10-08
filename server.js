@@ -368,10 +368,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true,
   setHeaders: (res, fp) => {
-    // Landing HTML is already no-cache; app.js must also revalidate so
-    // clients pick up matching/age-gate fixes immediately after redeploy
-    // instead of running a stale 1h-cached bundle that shows old errors.
-    if (fp.endsWith('.html') || fp.endsWith(`${path.sep}app.js`)) {
+    // Landing HTML is already no-cache; app.js + styles.css must also revalidate so
+    // clients pick up matching/age-gate/UI fixes immediately after redeploy
+    // instead of running a stale 1h-cached bundle that breaks the layout.
+    if (fp.endsWith('.html') || fp.endsWith(`${path.sep}app.js`) || fp.endsWith(`${path.sep}styles.css`)) {
       res.setHeader('Cache-Control', 'no-cache');
     }
   }
