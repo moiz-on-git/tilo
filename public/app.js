@@ -341,15 +341,27 @@
       let done = false;
       const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
       const onOk = () => { ageVerified = true; cleanup(); finish(true); };
-      const onDenied = () => { ageVerified = false; cleanup(); finish(false); };
+      const onDenied = (d) => {
+        ageVerified = false;
+        try {
+          if (d && d.message) showGateError(d.message);
+          else if (d && d.code) showGateError('Age verification refused (' + d.code + '). 18+ only.');
+        } catch {}
+        cleanup(); finish(false);
+      };
       const onRequired = () => { ageVerified = false; cleanup(); finish(false); };
+      const onConnectError = (e) => {
+        try { showGateError('Could not reach the chat server (' + ((e && e.message) || 'connection refused') + '). Check APP_ORIGIN / network, then retry.'); } catch {}
+        cleanup(); finish(false);
+      };
       function cleanup() {
-        try { s.off('age-ok', onOk); s.off('age-denied', onDenied); s.off('age-required', onRequired); } catch {}
+        try { s.off('age-ok', onOk); s.off('age-denied', onDenied); s.off('age-required', onRequired); s.off('connect_error', onConnectError); } catch {}
         clearTimeout(timer);
       }
       s.on('age-ok', onOk);
       s.on('age-denied', onDenied);
       s.on('age-required', onRequired);
+      s.on('connect_error', onConnectError);
       const timer = setTimeout(() => { cleanup(); finish(false); }, 8000);
       if (!s.connected) {
         s.once('connect', () => s.emit('attest-age', { dob, confirm18: true }));
@@ -375,7 +387,9 @@
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) {
-        showGateError(j.message || 'Age verification failed. 18+ only.');
+        if (r.status === 429) showGateError('Server is rate-limiting this network (429). On Render set TRUSTED_PROXY_IPS=private so each visitor gets their own quota, then retry.');
+        else if (r.status === 451) showGateError('This region is not enabled yet (451). Check ALLOWED_COUNTRY_CODES.');
+        else showGateError((j && j.message) || ('Age verification failed (HTTP ' + r.status + '). 18+ only.'));
         return false;
       }
     } catch {
@@ -385,28 +399,37 @@
     lastDob = dob;
     const ok = await attestSocketAge(dob);
     if (!ok) {
-      showGateError('Age verification with the chat server failed. Reconnect and try again.');
+      if (!gateError.textContent) showGateError('Age verification with the chat server failed (socket). If self-hosted on Render: set APP_ORIGIN to your https URL, TRUST_PROXY=1, TRUSTED_PROXY_IPS=private, then redeploy and hard-refresh.');
       return false;
     }
     return true;
   }
 
   startBtn.onclick = async () => {
-    const ok = await verifyAgeGate();
-    if (!ok) return;
-    ensureSocket();
-    wantMatch = true;
-    paired = false;
-    landing.classList.remove('active');
-    chat.classList.add('active');
-    messagesEl.innerHTML = '';
-    sysMsg('Welcome to Tilo (18+). Never share personal info. Report/Block are one tap.');
-    setMode(mode);
-    if (mode === 'video') await getLocal();
-    else textOnlyNotice.classList.remove('hidden');
-    socket.emit('find-partner', { mode });
-    // mobile: scroll into chat, focus input on desktop only
-    if (window.innerWidth > 900) msgInput.focus();
+    if (startBtn.disabled) return;
+    startBtn.disabled = true;
+    const prevLabel = startBtn.textContent;
+    startBtn.textContent = 'VERIFYING…';
+    try {
+      const ok = await verifyAgeGate();
+      if (!ok) return;
+      ensureSocket();
+      wantMatch = true;
+      paired = false;
+      landing.classList.remove('active');
+      chat.classList.add('active');
+      messagesEl.innerHTML = '';
+      sysMsg('Welcome to Tilo (18+). Never share personal info. Report/Block are one tap.');
+      setMode(mode);
+      if (mode === 'video') await getLocal();
+      else textOnlyNotice.classList.remove('hidden');
+      socket.emit('find-partner', { mode });
+      // mobile: scroll into chat, focus input on desktop only
+      if (window.innerWidth > 900) msgInput.focus();
+    } finally {
+      startBtn.disabled = false;
+      startBtn.textContent = prevLabel;
+    }
   };
 
   nextBtn.onclick = () => {
