@@ -55,12 +55,18 @@
     toastEl._t = setTimeout(() => toastEl.classList.add('hidden'), ms);
   }
 
+  // Zero-scroll app: keep only the newest bubbles so everything fits without scrolling.
+  function trimMsgs() {
+    const MAX = 12;
+    while (messagesEl.children.length > MAX) messagesEl.removeChild(messagesEl.firstChild);
+  }
+
   function sysMsg(t) {
     const d = document.createElement('div');
     d.className = 'msg sys';
     d.textContent = t;
     messagesEl.appendChild(d);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    trimMsgs();
   }
 
   function addMsg(who, text) {
@@ -68,7 +74,7 @@
     d.className = 'msg ' + (who === 'you' ? 'you' : 'stranger');
     d.textContent = text; // safe: no HTML parsing
     messagesEl.appendChild(d);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    trimMsgs();
   }
 
   function showGateError(msg) {
@@ -213,7 +219,7 @@
       } else {
         remotePlaceholder.textContent = 'Connecting video…';
       }
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      trimMsgs();
       await setupPeer();
     });
     socket.on('partner-left', () => {
