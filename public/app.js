@@ -7,6 +7,7 @@
   const onlineLanding = $('onlineLanding'), onlineChat = $('onlineChat'), connState = $('connState');
   const messagesEl = $('messages'), msgForm = $('msgForm'), msgInput = $('msgInput');
   const nextBtn = $('nextBtn'), stopBtn = $('stopBtn'), reportBtn = $('reportBtn');
+  const skipOverlayBtn = $('skipOverlayBtn'), endOverlayBtn = $('endOverlayBtn');
   const blockBtn = $('blockBtn'), privacyBtn = $('privacyBtn');
   const muteBtn = $('muteBtn'), camBtn = $('camBtn');
   const localVideo = $('localVideo'), remoteVideo = $('remoteVideo');
@@ -449,6 +450,7 @@
     remotePlaceholder.textContent = 'Finding next stranger…';
     socket.emit('next', { mode });
   };
+  if (skipOverlayBtn) skipOverlayBtn.onclick = () => nextBtn.onclick();
 
   stopBtn.onclick = () => {
     wantMatch = false;
@@ -460,6 +462,7 @@
     landing.classList.add('active');
     setConn('idle');
   };
+  if (endOverlayBtn) endOverlayBtn.onclick = () => stopBtn.onclick();
 
   reportBtn.onclick = () => {
     if (!socket) return;

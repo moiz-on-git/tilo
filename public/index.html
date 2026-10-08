@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css" />
 <script src="/socket.io/socket.io.js" defer></script>
-<script src="/app.js?v=20261008d" defer></script>
+<script src="/app.js?v=20261008e" defer></script>
 </head>
 <body>
 <div id="app">
@@ -71,42 +71,42 @@
       <div class="brand-mini">TILO</div>
       <div class="top-status"><span class="dot"></span><span id="onlineChat">—</span>&nbsp;online • <span id="modeBadge">Video</span> • <span id="connState">idle</span></div>
       <div class="top-actions">
-        <button id="nextBtn" class="btn btn-light">Next</button>
-        <button id="blockBtn" class="btn btn-ghost" title="Block this stranger — never match again">Block</button>
-        <button id="privacyBtn" class="btn btn-ghost" title="Privacy, data & grievance">Privacy</button>
-        <button id="stopBtn" class="btn btn-ghost">Stop</button>
+        <button id="muteBtn" class="btn btn-ghost small">Mute</button>
+        <button id="camBtn" class="btn btn-ghost small">Cam Off</button>
+        <button id="blockBtn" class="btn btn-ghost small" title="Block this stranger — never match again">Block</button>
+        <button id="privacyBtn" class="btn btn-ghost small" title="Privacy, data & grievance">Privacy</button>
       </div>
     </header>
 
     <div class="safety-strip">
-      You’re chatting with a stranger. Never share phone, address, OTPs, passwords or bank details. Nudity/sexual content = instant ban.
+      <span class="safety-text">You’re chatting with a stranger. Never share phone, address, OTPs, passwords or bank details.</span>
       <button id="reportBtn" class="link-btn danger">Report</button>
     </div>
 
-    <main class="chat-grid">
-      <div class="video-pane">
-        <div class="video-wrap remote-wrap">
-          <video id="remoteVideo" autoplay playsinline></video>
-          <span class="video-label">Stranger</span>
-          <div id="remotePlaceholder" class="video-placeholder">Waiting for stranger…</div>
-        </div>
-        <div class="video-wrap local-wrap">
+    <main class="stage-wrap">
+      <div class="stage" id="stage">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <span class="video-label stranger-tag">Stranger</span>
+        <div id="remotePlaceholder" class="video-placeholder">Waiting for stranger…</div>
+        <div id="messages" class="messages overlay" aria-live="polite"></div>
+        <div id="typing" class="typing overlay-typing hidden">Stranger is typing…</div>
+        <div id="textOnlyNotice" class="text-only overlay-notice hidden">Text-only mode — camera is off.</div>
+        <div class="self-pip">
           <video id="localVideo" autoplay muted playsinline></video>
           <span class="video-label">You</span>
         </div>
-        <div class="media-controls">
-          <button id="muteBtn" class="btn btn-ghost small">Mute</button>
-          <button id="camBtn" class="btn btn-ghost small">Cam Off</button>
+        <div class="stage-controls">
+          <button id="skipOverlayBtn" class="btn btn-light small" type="button">Skip</button>
+          <button id="endOverlayBtn" class="btn btn-ghost small" type="button">End</button>
         </div>
-        <div id="textOnlyNotice" class="text-only hidden">Text-only mode — camera is off.</div>
       </div>
 
-      <div class="msg-pane">
-        <div id="messages" class="messages" aria-live="polite"></div>
-        <div id="typing" class="typing hidden">Stranger is typing…</div>
+      <div class="control-bar">
+        <button id="nextBtn" class="btn btn-light" type="button">Skip</button>
+        <button id="stopBtn" class="btn btn-ghost" type="button">End</button>
         <form id="msgForm" class="msg-form" autocomplete="off">
           <input id="msgInput" maxlength="500" placeholder="Type a message…" aria-label="Type a message" />
-          <button type="submit" class="btn btn-light">Send</button>
+          <button type="submit" class="btn btn-light send-btn">Send</button>
         </form>
       </div>
     </main>
