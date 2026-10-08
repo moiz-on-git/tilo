@@ -29,9 +29,17 @@
   let typingTimer = null;
   let muted = false, camOff = false;
   let ageVerified = false;
+  let lastDob = '';
+  let wantMatch = false; // true while the chat screen expects a partner
+  let paired = false;
 
   const CONSENT_KEY = 'tilo-consent-v1';
-  const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  let RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  // TURN is required for mobile-carrier symmetric NAT where STUN-only video
+  // connects the chat but the video never appears. Served from backend env.
+  fetch('/api/rtc-config').then((r) => r.json()).then((j) => {
+    if (j && Array.isArray(j.iceServers) && j.iceServers.length) RTC_CONFIG = { iceServers: j.iceServers };
+  }).catch(() => {});
 
   // Cap DOB picker to today (18y ago hint set on load).
   try {
@@ -132,18 +140,36 @@
     if (socket) return socket;
     // same-origin, no extra transports leaking IP beyond necessary
     socket = io({ transports: ['websocket', 'polling'] });
-    socket.on('connect', () => setConn('connected'));
-    socket.on('disconnect', () => { setConn('disconnected'); cleanupPeer(); });
+    socket.on('connect', () => {
+      setConn('connected');
+      console.debug('[tilo] connected', socket.id);
+      // Mobile networks flap: the server drops queue state on disconnect, so
+      // re-attest + re-queue automatically when the chat screen is open.
+      if (wantMatch && !paired && chat.classList.contains('active')) {
+        if (ageVerified && lastDob) socket.emit('attest-age', { dob: lastDob, confirm18: true });
+        socket.emit('find-partner', { mode });
+      }
+    });
+    socket.on('disconnect', (reason) => {
+      setConn('disconnected');
+      console.debug('[tilo] disconnected', reason);
+      paired = false;
+      cleanupPeer();
+    });
     socket.on('online-count', (d) => {
       const t = (d && d.count) + ' online';
       onlineLanding.textContent = t;
       onlineChat.textContent = d.count;
     });
     socket.on('waiting', () => {
+      paired = false;
       setConn('searching…');
       sysMsg('Looking for a stranger…');
       remotePlaceholder.style.display = 'flex';
       remotePlaceholder.textContent = 'Looking for a stranger…';
+    });
+    socket.on('queue-status', (d) => {
+      console.debug('[tilo] queue', d);
     });
     socket.on('still-waiting', () => toast('Still searching… try Next'));
     socket.on('rate-limited', () => toast('Slow down — too many requests'));
@@ -162,6 +188,7 @@
       if (d && d.category) sysMsg(`[Safety] Outgoing message blocked (${d.category}).`);
     });
     socket.on('matched', async (d) => {
+      paired = true;
       isCaller = d.role === 'caller';
       const peerMode = d && typeof d.peerMode === 'string' ? d.peerMode : null;
       const crossMode = !!(d && d.crossMode) || (peerMode && peerMode !== mode);
@@ -183,6 +210,7 @@
       await setupPeer();
     });
     socket.on('partner-left', () => {
+      paired = false;
       sysMsg('Stranger disconnected.');
       setConn('stranger left — press Next');
       cleanupPeer(false);
@@ -304,6 +332,33 @@
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; localVideo.srcObject = null; }
   }
 
+  // Wait for the server's authoritative age-ok before queueing. The old
+  // optimistic flag let find-partner race attest-age on flaky mobile networks
+  // and left users stuck on "searching…" with only an age-required toast.
+  function attestSocketAge(dob) {
+    return new Promise((resolve) => {
+      const s = ensureSocket();
+      let done = false;
+      const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+      const onOk = () => { ageVerified = true; cleanup(); finish(true); };
+      const onDenied = () => { ageVerified = false; cleanup(); finish(false); };
+      const onRequired = () => { ageVerified = false; cleanup(); finish(false); };
+      function cleanup() {
+        try { s.off('age-ok', onOk); s.off('age-denied', onDenied); s.off('age-required', onRequired); } catch {}
+        clearTimeout(timer);
+      }
+      s.on('age-ok', onOk);
+      s.on('age-denied', onDenied);
+      s.on('age-required', onRequired);
+      const timer = setTimeout(() => { cleanup(); finish(false); }, 8000);
+      if (!s.connected) {
+        s.once('connect', () => s.emit('attest-age', { dob, confirm18: true }));
+      } else {
+        s.emit('attest-age', { dob, confirm18: true });
+      }
+    });
+  }
+
   async function verifyAgeGate() {
     clearGateError();
     const dob = (dobInput.value || '').trim();
@@ -327,8 +382,12 @@
       showGateError('Could not reach age-verification service. Try again.');
       return false;
     }
-    ensureSocket().emit('attest-age', { dob, confirm18: true });
-    ageVerified = true; // confirmed again via socket 'age-ok'; optimistic for UX
+    lastDob = dob;
+    const ok = await attestSocketAge(dob);
+    if (!ok) {
+      showGateError('Age verification with the chat server failed. Reconnect and try again.');
+      return false;
+    }
     return true;
   }
 
@@ -336,6 +395,8 @@
     const ok = await verifyAgeGate();
     if (!ok) return;
     ensureSocket();
+    wantMatch = true;
+    paired = false;
     landing.classList.remove('active');
     chat.classList.add('active');
     messagesEl.innerHTML = '';
@@ -350,6 +411,8 @@
 
   nextBtn.onclick = () => {
     if (!socket) return;
+    wantMatch = true;
+    paired = false;
     typingEl.classList.add('hidden');
     sysMsg('— You pressed Next —');
     cleanupPeer(false);
@@ -359,6 +422,8 @@
   };
 
   stopBtn.onclick = () => {
+    wantMatch = false;
+    paired = false;
     if (socket) socket.emit('leave');
     cleanupPeer(false);
     stopLocalTracks();
@@ -393,6 +458,7 @@
 
   blockBtn.onclick = () => {
     if (!socket) return;
+    paired = false;
     socket.emit('block');
     fetch('/api/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
     sysMsg('You blocked the stranger. Disconnected — you will not match again.');

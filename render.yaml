@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: tilo
+    runtime: docker
+    plan: free
+    # Matching state is in-memory: NEVER scale above 1 instance unless you add
+    # a Socket.IO Redis adapter. Two instances = two queues = phones and PCs
+    # on different instances wait forever and never pair.
+    numInstances: 1
+    healthCheckPath: /health
+    disk:
+      name: tilo-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: APP_ORIGIN
+        sync: false
+      - key: TRUST_PROXY
+        value: 1
+      - key: TRUSTED_PROXY_IPS
+        value: private
+      - key: FORCE_HTTPS
+        value: true
+      - key: ALLOWED_COUNTRY_CODES
+        value: IN
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false

@@ -11,10 +11,34 @@ const compliance = require('./lib/compliance');
 const PORT = Number.parseInt(process.env.PORT, 10) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 const trustProxy = process.env.TRUST_PROXY === '1';
+// Identifies this Node process in logs + /health so split-brain deploys
+// (two Render instances serving the same URL) are visible immediately.
+const INSTANCE_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const STARTED_AT = Date.now();
 
 function parseTrustedProxyRanges(value) {
   if (typeof value !== 'string') return [];
-  return value.split(',').map((entry) => entry.trim()).filter(Boolean);
+  const out = [];
+  for (const entry of value.split(',')) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    // Shorthand for hosted platforms (Render/Railway/Fly): their edge proxy
+    // reaches Node from a private/internal address that is not static, so the
+    // peer IP must be trusted for X-Forwarded-For to be honoured. Without this
+    // every client collapses to the same proxy IP (shared rate-limit buckets,
+    // shared hashed identity, global block/ban poisoning) and matching breaks.
+    // Use TRUSTED_PROXY_IPS=private (or list the private CIDRs explicitly).
+    if (trimmed.toLowerCase() === 'private') {
+      out.push(
+        '127.0.0.1', '::1',
+        '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16',
+        'fc00::/7', 'fe80::/10',
+      );
+    } else {
+      out.push(trimmed);
+    }
+  }
+  return out;
 }
 
 const trustedProxyRanges = parseTrustedProxyRanges(process.env.TRUSTED_PROXY_IPS);
@@ -169,6 +193,22 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 // ---------- Compliance APIs ----------
+// RTC config: STUN always, TURN when configured (required for mobile-carrier
+// symmetric NAT where STUN-only video never connects even after matching).
+// Set TURN_URLS="turn:turn.example.com:3478", TURN_USERNAME, TURN_CREDENTIAL.
+function rtcIceServers() {
+  const servers = [{ urls: 'stun:stun.l.google.com:19302' }];
+  const turnUrls = String(process.env.TURN_URLS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (turnUrls.length > 0) {
+    const entry = { urls: turnUrls.length === 1 ? turnUrls[0] : turnUrls };
+    if (process.env.TURN_USERNAME) entry.username = String(process.env.TURN_USERNAME).slice(0, 128);
+    if (process.env.TURN_CREDENTIAL) entry.credential = String(process.env.TURN_CREDENTIAL).slice(0, 256);
+    servers.push(entry);
+  }
+  return servers;
+}
+
+app.get('/api/rtc-config', (req, res) => res.json({ ok: true, iceServers: rtcIceServers() }));
 // Itemised consent (DPDP notice + GDPR lawful-basis record). Stores decision
 // metadata only — no chat content, no media.
 app.post('/api/age-attest', (req, res) => {
@@ -334,7 +374,18 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-app.get('/health', (req, res) => res.json({ ok: true, online: onlineCount }));
+app.get('/health', (req, res) => res.json({
+  ok: true,
+  online: onlineCount,
+  waiting: waitingQueue.length,
+  paired: partners.size / 2,
+  instanceId: INSTANCE_ID,
+  uptimeSec: Math.floor((Date.now() - STARTED_AT) / 1000),
+  // If two devices report different instanceIds (refresh /health on each),
+  // the load balancer is splitting them across instances and in-memory
+  // matching can never pair them: scale to 1 instance or add a Redis adapter.
+  singleInstanceRequired: true,
+}));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -428,11 +479,19 @@ const waitingTimers = new Map();
 const blockGraph = new Map();
 function recordBlock(blockerHashed, blockedHashed) {
   if (!blockerHashed || !blockedHashed || blockerHashed === 'unknown') return;
+  // Same-hash pairs happen for same-household NAT (mobile + PC on one WiFi)
+  // and for misconfigured proxies where every client shares the proxy IP.
+  // Recording a self-edge would deadlock ALL future matches globally, so skip it.
+  if (blockerHashed === blockedHashed) return;
   if (!blockGraph.has(blockerHashed)) blockGraph.set(blockerHashed, new Set());
   blockGraph.get(blockerHashed).add(blockedHashed);
   compliance.appendJsonl(compliance.FILES.blocks, { blockerHashed, blockedHashed });
 }
 function isBlockedPair(aHashed, bHashed) {
+  if (!aHashed || !bHashed || aHashed === 'unknown' || bHashed === 'unknown') return false;
+  // Same household / same egress IP must always be allowed to match (this is
+  // exactly the "phone + laptop on one WiFi" test). Never self-block.
+  if (aHashed === bHashed) return false;
   return (blockGraph.get(aHashed)?.has(bHashed) || blockGraph.get(bHashed)?.has(aHashed)) ?? false;
 }
 
@@ -450,6 +509,7 @@ function pair(a, b, meta = {}) {
   const calleeId = callerId === a ? b : a;
   const callerPeerMode = callerId === a ? peerModeForA : peerModeForB;
   const calleePeerMode = callerId === a ? peerModeForB : peerModeForA;
+  console.log(`[match:${INSTANCE_ID}] paired ${a.slice(0, 6)}<->${b.slice(0, 6)} caller=${callerId.slice(0, 6)} crossMode=${crossMode} waiting=${waitingQueue.length} paired=${partners.size / 2}`);
   io.to(callerId).emit('matched', { role: 'caller', peerMode: callerPeerMode, crossMode });
   io.to(calleeId).emit('matched', { role: 'callee', peerMode: calleePeerMode, crossMode });
   broadcastCount();
@@ -482,6 +542,10 @@ function enqueue(socket, mode) {
 
   waitingQueue.push({ id: socket.id, mode });
   socket.emit('waiting');
+  // Tell the client its queue position so "stuck on waiting" is debuggable
+  // from the browser console and Render logs (instanceId pins the process).
+  socket.emit('queue-status', { position: waitingQueue.length, instanceId: INSTANCE_ID });
+  console.log(`[match:${INSTANCE_ID}] enqueue ${socket.id.slice(0, 6)} mode=${mode} waiting=${waitingQueue.length} online=${onlineCount}`);
   const timer = setTimeout(() => {
     waitingTimers.delete(socket.id);
     if (!partners.has(socket.id) && waitingQueue.some(waiter => waiter.id === socket.id)) {
@@ -577,6 +641,15 @@ function isValidCandidate(candidate) {
 io.on('connection', (socket) => {
   const ip = clientIp(socket.request);
   const hashedIp = compliance.hashIp(ip);
+  let peerIp = 'unknown';
+  try {
+    peerIp = String(socket.request?.socket?.remoteAddress || 'unknown');
+  } catch { /* ignore */ }
+  // Visibility for Render debugging: peerIp is the TCP peer (Render router),
+  // ip is the derived client IP (X-Forwarded-For when the proxy is trusted).
+  // If every connection logs the same ip, TRUSTED_PROXY_IPS is wrong and all
+  // users share rate-limit buckets + hashed identity.
+  console.log(`[net:${INSTANCE_ID}] connect ${socket.id.slice(0, 6)} peer=${peerIp} client=${ip} trustedProxy=${trustProxy}`);
   const banned = compliance.isBanned(hashedIp);
   if (banned) {
     socket.emit('banned', { until: banned.until, reason: banned.reason });
@@ -662,7 +735,10 @@ io.on('connection', (socket) => {
       socket.emit('rate-limited');
       return;
     }
-    if (!requireAge()) return;
+    if (!requireAge()) {
+      console.log(`[match:${INSTANCE_ID}] find-partner rejected (age-required) ${socket.id.slice(0, 6)}`);
+      return;
+    }
 
     let mode = 'video';
     if (data && (data.mode === 'text' || data.mode === 'video')) mode = data.mode;
@@ -672,6 +748,7 @@ io.on('connection', (socket) => {
     // already queued? update mode
     removeFromQueue(socket.id);
 
+    console.log(`[match:${INSTANCE_ID}] find-partner ${socket.id.slice(0, 6)} mode=${mode} waitingBefore=${waitingQueue.length}`);
     const matched = tryMatch(socket.id, mode);
     if (!matched) enqueue(socket, mode);
     compliance.ictLog('find-partner', { hashedIp, sessionId: socket.data.sessionId, mode });
@@ -854,8 +931,13 @@ if (require.main === module) {
   const HOST = process.env.HOST || '0.0.0.0';
   server.listen(PORT, HOST, () => {
     const c = compliance.config;
-    console.log(`Tilo running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT} (${isProduction ? 'production' : 'development'})`);
+    console.log(`Tilo running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT} (${isProduction ? 'production' : 'development'}) instance=${INSTANCE_ID}`);
     console.log(`Contact: ${c.supportEmail} | consent ${c.consentVersion} | allowlist [${[...c.allowedCountries]}] blocklist [${[...c.blockedCountries]}] | ICT ${c.ictLogDays}d India`);
+    console.log(`Proxy: TRUST_PROXY=${trustProxy ? '1' : '0'} TRUSTED_PROXY_IPS=${trustedProxyRanges.join(' ') || '(none)'}`);
+    if (isProduction && !trustProxy) {
+      console.log('WARN: behind Render/Railway/Fly you must set TRUST_PROXY=1 + TRUSTED_PROXY_IPS=private, or all clients share one IP and matching/rate-limits break.');
+    }
+    console.log(`Matching: in-memory queue (SINGLE INSTANCE REQUIRED). Scale to 1 instance on Render or matches split across processes. TURN=${String(process.env.TURN_URLS || '').trim() ? 'configured' : 'stun-only'}`);
   });
   const shutdown = (signal) => {
     console.log(`${signal} received — closing server (no new connections, sockets drain)...`);
@@ -866,4 +948,4 @@ if (require.main === module) {
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-module.exports = { app, server, io, compliance };
+module.exports = { app, server, io, compliance, INSTANCE_ID };
