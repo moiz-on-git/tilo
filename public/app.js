@@ -156,6 +156,12 @@
       paired = false;
       cleanupPeer();
     });
+    socket.on('connect_error', (e) => {
+      // Surfaces handshake rejections (wrong APP_ORIGIN, rate limit) that
+      // otherwise leave the landing page on "— online" with no explanation.
+      console.debug('[tilo] connect_error', (e && e.message) || e);
+      setConn('connection failed — check server URL');
+    });
     socket.on('online-count', (d) => {
       const t = (d && d.count) + ' online';
       onlineLanding.textContent = t;

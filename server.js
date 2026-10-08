@@ -368,7 +368,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true,
   setHeaders: (res, fp) => {
-    if (fp.endsWith('.html')) {
+    // Landing HTML is already no-cache; app.js must also revalidate so
+    // clients pick up matching/age-gate fixes immediately after redeploy
+    // instead of running a stale 1h-cached bundle that shows old errors.
+    if (fp.endsWith('.html') || fp.endsWith(`${path.sep}app.js`)) {
       res.setHeader('Cache-Control', 'no-cache');
     }
   }
@@ -433,7 +436,12 @@ function clientIp(req) {
 }
 
 function allowHandshake(req) {
-  if (!isAllowedOrigin(req.headers.origin)) return false;
+  if (!isAllowedOrigin(req.headers.origin)) {
+    // Visible in Render logs: the #1 cause of "socket never connects" is
+    // APP_ORIGIN not matching the public URL (e.g. missing subdomain).
+    console.log(`[net:${INSTANCE_ID}] handshake denied origin=${String(req.headers.origin || '(none)').slice(0, 80)} ip=${clientIp(req)}`);
+    return false;
+  }
 
   // Engine.IO invokes allowRequest for the initial request. Keep this guard scoped
   // to handshakes so normal long-polling traffic is not accidentally throttled.
@@ -454,7 +462,9 @@ function allowHandshake(req) {
     return true;
   }
   entry.count += 1;
-  return entry.count <= MAX_HANDSHAKES_PER_MINUTE;
+  const allowed = entry.count <= MAX_HANDSHAKES_PER_MINUTE;
+  if (!allowed) console.log(`[net:${INSTANCE_ID}] handshake rate-limited ip=${ip}`);
+  return allowed;
 }
 
 const io = new Server(server, {
